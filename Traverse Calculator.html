@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traverse Calculator</title>
+</head>
+<body>
+<h1>Traverse Calculator Sheet</h1>
+<h2>Enter Known Coordinates</h2>
+<h2>first Known Coordinates</h2>
+<label for="myknownX1"> X1: </label><input type="number" id="myknownX1" placeholder="Enter X1">
+<label for="myknownY1"> Y1: </label><input type="number" id="myknownY1" placeholder="Enter Y1"><br>
+<h2>Second Known Coordinates</h2>
+<label for="myknownX2"> X2: </label><input type="number" id="myknownX2" placeholder="Enter X2">
+<label for="myknownY2"> Y2: </label><input type="number" id="myknownY2" placeholder="Enter Y2">
+<button id="bearing">Calculate Bearing</button><br>
+<p id="bearingresult"></p>
+
+<h2>Enter Observed angle</h2>
+<label for="myinputnumber1">Number of observed stations: </label><input type="number" id="myinputnumber1" placeholder="Enter number of stations">
+<button id="submitbutton1">Submit</button><br>
+<p id="nresult"></p>
+<div id="inputboxAngles"></div>
+
+<script>
+    const x1 = document.getElementById("myknownX1");
+    const y1 = document.getElementById("myknownY1");
+    const x2 = document.getElementById("myknownX2");
+    const y2 = document.getElementById("myknownY2");
+    const bearingbutton = document.getElementById("bearing");
+    const bearingresult = document.getElementById("bearingresult");
+
+    const nAngle = document.getElementById("myinputnumber1");
+    const nresult = document.getElementById("nresult");
+    const submitbutton = document.getElementById("submitbutton1");
+    const inputboxAngles = document.getElementById("inputboxAngles");
+
+    function getBearing() {
+        const x1Value = parseFloat(x1.value);
+        const y1Value = parseFloat(y1.value);
+        const x2Value = parseFloat(x2.value);
+        const y2Value = parseFloat(y2.value);
+        if (isNaN(x1Value) || isNaN(y1Value) || isNaN(x2Value) || isNaN(y2Value)) {
+            bearingresult.textContent = "Please enter valid coordinates for both stations.";
+            return;
+        }
+        const dx = x2Value - x1Value;
+        const dy = y2Value - y1Value;
+        let bearing = Math.atan2(dx, dy) * (180 / Math.PI);
+        if (bearing < 0) {
+            bearing += 360;
+        }
+        bearingresult.textContent = 'The bearing of line 12 is: ' + bearing.toFixed(2) + '°';
+    }
+    bearingbutton.addEventListener('click', getBearing);
+
+    function getnAngles() {
+        const numberofAngles = parseInt(nAngle.value, 10);
+        nresult.textContent = "Enter each angle in decimal degrees (Angles in degree minute seconds cannot be processed!!)";
+        inputboxAngles.innerHTML = "";
+
+        if (isNaN(numberofAngles) || numberofAngles <= 0) {
+            nresult.textContent = "Please enter a valid number greater than 0.";
+            return;
+        } else if (numberofAngles < 3) {
+            nresult.textContent = "A minimum of three angles is required for a closed traverse.";
+            return;
+        }
+
+        for (let i = 0; i < numberofAngles; i++) {
+            const inputBox = document.createElement("input");
+            inputBox.type = "number";
+            inputBox.placeholder = "Enter Angle " + (i + 1) + ":";
+            inputBox.className = "angleInputBox";
+            inputboxAngles.appendChild(inputBox);
+        }
+
+        if (!document.getElementById('calculateButton')) {
+            const calculateButton = document.createElement('button');
+            calculateButton.textContent = 'Calculate Closing Error';
+            calculateButton.id = 'calculateButton';
+            inputboxAngles.appendChild(calculateButton);
+            calculateButton.addEventListener('click', storeAngle);
+        }
+    }
+
+    function storeAngle() {
+        const inputBoxes = document.querySelectorAll('.angleInputBox');
+        var angles = [];
+
+        for (let i = 0; i < inputBoxes.length; i++) {
+            const inputBoxx = inputBoxes[i];
+            const angleValue = parseFloat(inputBoxx.value);
+
+            if (!isNaN(angleValue)) {
+                angles.push(angleValue);
+            } else {
+                alert('Please enter a valid number for Angle ' + (i + 1) + ":");
+                return;
+            }
+        }
+
+        var observedAngle = 0
+        for (let i = 0; i < angles.length; i++) {
+            observedAngle += angles[i];
+        }
+
+        const actualAngle = (angles.length - 2) * 180;
+        const Correction = actualAngle - observedAngle;
+        var disCorrection = Correction / angles.length;
+
+        inputboxAngles.innerHTML += "<br>";
+        inputboxAngles.innerHTML += "<br>";
+        inputboxAngles.innerHTML += "Total Observed Angle Sum: " + observedAngle.toFixed(2) + "°";
+        inputboxAngles.innerHTML += "<br>";
+        inputboxAngles.innerHTML += "Total Actual Angle Sum: " + actualAngle.toFixed(2) + "°";
+        inputboxAngles.innerHTML += "<br>";
+        inputboxAngles.innerHTML += "Error: " + Correction.toFixed(2) + "°";
+        inputboxAngles.innerHTML += "<br>";
+        inputboxAngles.innerHTML += "<br>";
+        inputboxAngles.innerHTML += '<strong>Corrected Angles:</strong>';
+        inputboxAngles.innerHTML += "<br>";
+
+        for (let i = 0; i < angles.length; i++) {
+            const correctedAngle = angles[i] + disCorrection;
+            const correctedInputBox = document.createElement("input");
+            correctedInputBox.type = "text";
+            correctedInputBox.value = 'Angle ' + (i + 1) + ": " + correctedAngle.toFixed(3) + "°";
+            correctedInputBox.disabled = true;
+            correctedInputBox.className = "correctedAngleBox";
+            inputboxAngles.appendChild(correctedInputBox);
+            inputboxAngles.appendChild(document.createElement("br"));
+        }
+
+        // Button to Calculate Bearings
+        const calculateBearingsButton = document.createElement('button');
+        calculateBearingsButton.textContent = 'Calculate Bearings';
+        calculateBearingsButton.id = 'calculateBearingsButton';
+        inputboxAngles.appendChild(calculateBearingsButton);
+        calculateBearingsButton.addEventListener('click', calculateBearings);
+    }
+
+    function calculateBearings() {
+        const correctedAngles = document.querySelectorAll('.correctedAngleBox');
+        const initialBearing = parseFloat(bearingresult.textContent.split(":")[1]);
+        let currentBearing = initialBearing;
+
+        const bearingsContainer = document.createElement('div');
+        bearingsContainer.id = 'bearingsContainer';
+        inputboxAngles.appendChild(bearingsContainer);
+
+        bearingsContainer.innerHTML += '<strong>Calculated Bearings:</strong><br>';
+
+        const initialBearingBox = document.createElement("input");
+        initialBearingBox.type = "text";
+        initialBearingBox.value = 'Bearing 1: ' + currentBearing.toFixed(2) + "°";
+        initialBearingBox.disabled = true;
+        initialBearingBox.className = "bearingBox";
+        bearingsContainer.appendChild(initialBearingBox);
+        bearingsContainer.appendChild(document.createElement("br"));
+
+        for (let i = 0; i < correctedAngles.length; i++) {
+            const angleValue = parseFloat(correctedAngles[i].value.split(":")[1]);
+            currentBearing = calculateNewBearing(currentBearing, angleValue);
+
+            const bearingInputBox = document.createElement("input");
+            bearingInputBox.type = "text";
+            bearingInputBox.value = "Bearing " + (i + 2) + ": " + currentBearing.toFixed(2) + "°";
+            bearingInputBox.disabled = true;
+            bearingInputBox.className = "bearingBox";
+            bearingsContainer.appendChild(bearingInputBox);
+            bearingsContainer.appendChild(document.createElement("br"));
+        }
+
+        // Button to Enter Distance
+        const enterdistanceButton = document.createElement('button');
+        enterdistanceButton.textContent = 'Enter Distance';
+        enterdistanceButton.id = 'enterdistanceButton';
+        inputboxAngles.appendChild(enterdistanceButton);
+        enterdistanceButton.addEventListener('click', enterDistance);
+    }
+
+    function calculateNewBearing(previousBearing, includedAngle) {
+        if (previousBearing < 180) {
+            let newBearing = previousBearing + 180 + includedAngle;
+            if (newBearing >= 360) {
+                newBearing -= 360;
+            } else if (newBearing < 0) {
+                newBearing += 360;
+            }
+            return newBearing;
+        } else {
+            let newBearing = previousBearing - 180 + includedAngle;
+            if (newBearing >= 360) {
+                newBearing -= 360;
+            } else if (newBearing < 0) {
+                newBearing += 360;
+            }
+            return newBearing;
+        }
+    }
+
+    function enterDistance() {
+        const numberofDistances = nAngle.value;
+        const distanceContainer = document.createElement("div");
+        distanceContainer.id = "distanceContainer";
+        inputboxAngles.appendChild(distanceContainer);
+        distanceContainer.innerHTML = "<br><strong>Enter Distances:</strong><br>";
+
+        for (let i = 0; i < numberofDistances; i++) {
+            const inputBox = document.createElement("input");
+            inputBox.type = "number";
+            inputBox.placeholder = "Enter Distance for Line " + (i + 1) + ":";
+            inputBox.className = "distanceInputBox";
+            distanceContainer.appendChild(inputBox);
+            distanceContainer.appendChild(document.createElement("br"));
+        }
+
+        if (!document.getElementById('calculateCoordinatesButton')) {
+            const calculateCoordinatesButton = document.createElement('button');
+            calculateCoordinatesButton.textContent = 'Calculate Coordinates';
+            calculateCoordinatesButton.id = 'calculateCoordinatesButton';
+            distanceContainer.appendChild(calculateCoordinatesButton);
+            calculateCoordinatesButton.addEventListener('click', calculateCoordinates);
+        }
+    }
+
+    function calculateCoordinates() {
+        const distances = document.querySelectorAll('.distanceInputBox');
+        const bearings = document.querySelectorAll('.bearingBox');
+
+        let coordinatesContainer = document.createElement('div');
+        coordinatesContainer.id = 'coordinatesContainer';
+        inputboxAngles.appendChild(coordinatesContainer);
+
+        let x = parseFloat(x2.value);
+        let y = parseFloat(y2.value);
+
+        coordinatesContainer.innerHTML = "<br><strong>Calculated Coordinates:</strong><br>";
+        coordinatesContainer.innerHTML += "Initial Known Point: X: " + x.toFixed(3) + " Y: " + y.toFixed(3) + "<br>";
+
+        for (let i = 0; i < distances.length; i++) {
+            const distanceValue = parseFloat(distances[i].value);
+            const bearingValue = parseFloat(bearings[i].value.split(":")[1]);
+
+            if (isNaN(distanceValue)) {
+                alert('Please enter a valid distance for Line ' + (i + 1));
+                return;
+            }
+
+            const dx = distanceValue * Math.sin(bearingValue * (Math.PI / 180));
+            const dy = distanceValue * Math.cos(bearingValue * (Math.PI / 180));
+
+            x += dx;
+            y += dy;
+
+            coordinatesContainer.innerHTML += "Coordinates for Line " + (i + 1) + ": X: " + x.toFixed(3) + " Y: " + y.toFixed(3) + "<br>";
+        }
+    }
+
+    submitbutton.addEventListener('click', getnAngles);
+</script>
+
+</body>
+</html>
